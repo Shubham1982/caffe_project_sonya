@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: caffe
+  profiles:
+    active: prod # Change this to 'prod' when you want to use the production Supabase database
+
+# Common Configurations
+cloudinary:
+  cloud_name: dbcg3byao
+  api_key: "946119375975345"
+  api_secret: RtlCMUYxEHa5U5XD32PZViVd5A4
+
+
+# ---------------------------------------------------------
+# PRESERVED COMMENTED CODE FROM OLD PROPERTIES FILE
+# ---------------------------------------------------------
+# spring.datasource.url=jdbc:mysql://localhost:3306/caffe
+# spring.datasource.username=root
+# spring.datasource.password=root
+
+# MYSQL online setup
+# spring.datasource.url=jdbc:mysql://interchange.proxy.rlwy.net:22712/railway
+# spring.datasource.username=root
+# spring.datasource.password=bKckahtLBsKCDjvECvTCHJWkazNvAOli
+# spring.jpa.hibernate.ddl-auto=update
+# spring.jpa.show-sql=true
+# spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQLDialect
+# mysql://root:bKckahtLBsKCDjvECvTCHJWkazNvAOli@interchange.proxy.rlwy.net:22712/railway
