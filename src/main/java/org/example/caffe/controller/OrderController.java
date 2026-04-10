@@ -26,14 +26,14 @@ public class OrderController {
 
     @PutMapping("/items/{id}/quantity")
     public OrderItem updateQuantity(
-            @PathVariable Long id,
-            @RequestParam Long quantity
+            @PathVariable("id") Long id,
+            @RequestParam("quantity") Long quantity
     ) {
         return orderService.updateQuantity(id, quantity);
     }
 
     @GetMapping("/{id}")
-    public OrderDto getOrderById(@PathVariable Long id) {
+    public OrderDto getOrderById(@PathVariable("id") Long id) {
         return orderService.getOrderById(id);
     }
     @GetMapping("/getAllOrders")
@@ -41,7 +41,7 @@ public class OrderController {
         return orderService.getAllOrders();
     }
     @DeleteMapping("/{id}")
-    public String deleteOrder(@PathVariable Long id) {
+    public String deleteOrder(@PathVariable("id") Long id) {
         return orderService.softDeleteOrder(id);
     }
 }
