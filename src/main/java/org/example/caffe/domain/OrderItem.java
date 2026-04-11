@@ -23,8 +23,11 @@ public class OrderItem extends AbstractAuditingEntity implements Serializable {
     private Double productPrice;
     private Double productActualMadePrice;
     private Long quantity;
-    private Boolean isActive;
     private Double totalPrice;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private OrderStatus status;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id")
