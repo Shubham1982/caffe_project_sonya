@@ -6,6 +6,13 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import java.util.Optional;
+
 @Repository
 public interface OrderRepository extends JpaRepository<Order, Long> {
+    Optional<Order> findByIdAndIsActiveTrue(Long id);
+    Page<Order> findAllByIsActiveTrue(Pageable pageable);
+    List<Order> findAllByIsActiveTrue();
 }

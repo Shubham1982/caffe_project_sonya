@@ -17,12 +17,13 @@ public class ProductController {
 
     // Add Product
     @PostMapping("/product/add")
-    public Product addProduct(@RequestBody Product product) {
-        return productService.addProduct(product);
+    public String addProduct(@RequestBody Product product) {
+        productService.addProduct(product);
+        return "Product added successfully";
     }
     @PutMapping("/product/update")
     public Product updateProduct(@RequestBody Product product) {
-        return productService.addProduct(product);
+        return productService.updateProduct(product);
     }
 
     // Get Product by ID
@@ -33,8 +34,11 @@ public class ProductController {
 
     // Get All Products
     @GetMapping("/product/getall")
-    public List<Product> getAllProducts() {
-        return productService.getAllProducts();
+    public List<Product> getAllProducts(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size
+    ) {
+        return productService.getAllProducts(page, size);
     }
     @DeleteMapping("/product/delete/{id}")
     public String deleteProduct(@PathVariable("id") Long id) {
