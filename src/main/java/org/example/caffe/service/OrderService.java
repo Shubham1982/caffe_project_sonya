@@ -133,9 +133,9 @@ public class OrderService {
             int currentPage = (page != null) ? page : 0;
             int pageSize = (size != null) ? size : 10;
             Pageable pageable = PageRequest.of(currentPage, pageSize);
-            orders = orderRepository.findAllByIsActiveTrue(pageable).getContent();
+            orders = orderRepository.findAllByIsActiveTrueOrderByIdDesc(pageable).getContent();
         } else {
-            orders = orderRepository.findAllByIsActiveTrue();
+            orders = orderRepository.findAllByIsActiveTrueOrderByIdDesc();
         }
 
         List<OrderDto> dtos = new ArrayList<>();
