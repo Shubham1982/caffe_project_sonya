@@ -20,13 +20,21 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
      Optional<Product> findByIdAndIsActiveIsTrue(Long id);
 
-     @Query(value = "select * from products where is_active is true order by product_name", nativeQuery = true)
+     @Query(value = "SELECT p.* FROM products p " +
+             "LEFT JOIN (SELECT product_name, SUM(quantity) as total_qty FROM order_items WHERE status != 'CANCELLED' GROUP BY product_name) oi " +
+             "ON p.product_name = oi.product_name " +
+             "WHERE p.is_active IS TRUE " +
+             "ORDER BY COALESCE(oi.total_qty, 0) DESC, p.product_name ASC", nativeQuery = true)
      List<Product> findAllProductsAndIsActiveIsTrue();
-
-     @Query(value = "select * from products where is_active is true order by product_name", countQuery = "select count(*) from products where is_active is true", nativeQuery = true)
+ 
+     @Query(value = "SELECT p.* FROM products p " +
+             "LEFT JOIN (SELECT product_name, SUM(quantity) as total_qty FROM order_items WHERE status != 'CANCELLED' GROUP BY product_name) oi " +
+             "ON p.product_name = oi.product_name " +
+             "WHERE p.is_active IS TRUE " +
+             "ORDER BY COALESCE(oi.total_qty, 0) DESC, p.product_name ASC",
+             countQuery = "SELECT count(*) FROM products WHERE is_active IS TRUE",
+             nativeQuery = true)
      Page<Product> findAllProductsAndIsActiveIsTrue(Pageable pageable);
-
-     List<Product> findByIdInAndIsActiveIsTrue(Set<Long> productId);
 
      Optional<Product> findByIdAndIsActiveTrue(Long productId);
 }

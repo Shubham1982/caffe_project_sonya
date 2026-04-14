@@ -12,7 +12,10 @@ import java.io.Serializable;
 @Data
 @RequiredArgsConstructor
 @Entity
-@Table(name = "products")
+@Table(name = "products", indexes = {
+    @Index(name = "idx_product_name", columnList = "productName"),
+    @Index(name = "idx_product_active", columnList = "isActive")
+})
 public class Product extends AbstractAuditingEntity implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
