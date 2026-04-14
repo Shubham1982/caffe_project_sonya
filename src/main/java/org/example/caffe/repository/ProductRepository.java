@@ -20,10 +20,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
      Optional<Product> findByIdAndIsActiveIsTrue(Long id);
 
-     @Query(value = "select * from products where is_active is true", nativeQuery = true)
+     @Query(value = "select * from products where is_active is true order by product_name", nativeQuery = true)
      List<Product> findAllProductsAndIsActiveIsTrue();
 
-     @Query(value = "select * from products where is_active is true", countQuery = "select count(*) from products where is_active is true", nativeQuery = true)
+     @Query(value = "select * from products where is_active is true order by product_name", countQuery = "select count(*) from products where is_active is true", nativeQuery = true)
      Page<Product> findAllProductsAndIsActiveIsTrue(Pageable pageable);
 
      List<Product> findByIdInAndIsActiveIsTrue(Set<Long> productId);
