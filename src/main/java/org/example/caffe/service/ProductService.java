@@ -23,8 +23,20 @@ public class ProductService {
         product.setIsActive(true);
         return productRepository.save(product);
     }
+
     public Product updateProduct(Product product) {
+        validateProduct(product);
         return productRepository.save(product);
+    }
+
+    private void validateProduct(Product product) {
+        if (product.getId() == null) {
+            throw new IllegalArgumentException("Product ID must not be null");
+        }
+
+        if (product.getProductActualMadePrice() > product.getProductPrice()) {
+            throw new IllegalArgumentException("Actual made price cannot be greater than product price");
+        }
     }
 
     public Product getProductById(Long id) {
