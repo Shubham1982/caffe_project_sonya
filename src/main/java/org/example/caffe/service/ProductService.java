@@ -24,7 +24,6 @@ public class ProductService {
         return productRepository.save(product);
     }
     public Product updateProduct(Product product) {
-        product.setIsActive(true);
         return productRepository.save(product);
     }
 
