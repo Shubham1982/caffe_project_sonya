@@ -6,6 +6,7 @@ import org.example.caffe.domain.OrderStatus;
 import org.example.caffe.domain.Product;
 import org.example.caffe.dto.CreateOrderRequest;
 import org.example.caffe.dto.OrderDto;
+import org.example.caffe.dto.DashboardDto;
 import org.example.caffe.error.ResourceNotFoundException;
 import org.example.caffe.repository.OrderItemRepository;
 import org.example.caffe.repository.OrderRepository;
@@ -13,12 +14,14 @@ import org.example.caffe.repository.ProductRepository;
 import org.example.caffe.mapper.OrderMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.ArrayList;
-import java.util.List;
-
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class OrderService {
@@ -34,6 +37,29 @@ public class OrderService {
         this.orderItemRepository = orderItemRepository;
         this.productRepository = productRepository;
         this.orderMapper = orderMapper;
+    }
+
+    public DashboardDto getDashboardData(LocalDate startDate, LocalDate endDate) {
+        Instant start = startDate.atStartOfDay().toInstant(ZoneOffset.UTC);
+        Instant end = endDate.atTime(23, 59, 59).toInstant(ZoneOffset.UTC);
+
+        List<OrderItem> placedItems = orderItemRepository.findByStatusAndCreatedDateBetween(
+                OrderStatus.PLACED, start, end);
+
+        Double totalAmount = 0.0;
+        Double actualTotalAmount = 0.0;
+
+        for (OrderItem item : placedItems) {
+            totalAmount += item.getTotalPrice() != null ? item.getProductPrice() : 0.0;
+            actualTotalAmount += (item.getProductActualMadePrice() != null ? item.getProductActualMadePrice() : 0.0) * item.getQuantity();
+        }
+
+        return DashboardDto.builder()
+                .totalAmount(totalAmount)
+                .actualTotalAmount(actualTotalAmount)
+                .profit(totalAmount - actualTotalAmount).
+                orderItemCount((long) placedItems.size())
+                .build();
     }
 
     @Transactional
