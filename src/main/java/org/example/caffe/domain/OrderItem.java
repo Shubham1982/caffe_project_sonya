@@ -12,7 +12,9 @@ import java.io.Serializable;
 @Data
 @RequiredArgsConstructor
 @Entity
-@Table(name = "order_items")
+@Table(name = "order_items", indexes = {
+    @Index(name = "idx_order_item_name_status", columnList = "productName, status")
+})
 public class OrderItem extends AbstractAuditingEntity implements Serializable {
 
     @Id
