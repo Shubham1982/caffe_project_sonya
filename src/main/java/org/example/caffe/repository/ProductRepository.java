@@ -5,8 +5,10 @@ import org.example.caffe.domain.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -21,20 +23,34 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
      Optional<Product> findByIdAndIsActiveIsTrue(Long id);
 
      @Query(value = "SELECT p.* FROM products p " +
-             "LEFT JOIN (SELECT product_name, SUM(quantity) as total_qty FROM order_items WHERE status != 'CANCELLED' GROUP BY product_name) oi " +
-             "ON p.product_name = oi.product_name " +
+             "LEFT JOIN product_sales_qty_stats stats ON p.id = stats.product_id " +
              "WHERE p.is_active IS TRUE " +
-             "ORDER BY COALESCE(oi.total_qty, 0) DESC, p.product_name ASC", nativeQuery = true)
-     List<Product> findAllProductsAndIsActiveIsTrue();
- 
-     @Query(value = "SELECT p.* FROM products p " +
-             "LEFT JOIN (SELECT product_name, SUM(quantity) as total_qty FROM order_items WHERE status != 'CANCELLED' GROUP BY product_name) oi " +
-             "ON p.product_name = oi.product_name " +
-             "WHERE p.is_active IS TRUE " +
-             "ORDER BY COALESCE(oi.total_qty, 0) DESC, p.product_name ASC",
+             "ORDER BY " +
+             "CASE WHEN stats.last_modified_date >= :fromDate " +
+             "THEN COALESCE(stats.total_quantity_sold, 0) ELSE 0 END DESC, " +
+             "p.created_date DESC, " +
+             "p.product_name ASC",
              countQuery = "SELECT count(*) FROM products WHERE is_active IS TRUE",
              nativeQuery = true)
-     Page<Product> findAllProductsAndIsActiveIsTrue(Pageable pageable);
+     Page<Product> findAllProductsAndIsActiveIsTrue(
+             @Param("fromDate") Timestamp fromDate,
+             Pageable pageable
+     );
+
+     @Query(value = "SELECT p.* FROM products p " +
+             "LEFT JOIN product_sales_qty_stats stats ON p.id = stats.product_id " +
+             "WHERE p.is_active IS TRUE " +
+             "ORDER BY " +
+             "CASE WHEN stats.last_modified_date >= :fromDate " +
+             "THEN COALESCE(stats.total_quantity_sold, 0) ELSE 0 END DESC, " +
+             "p.created_date DESC, " +
+             "p.product_name ASC",
+             nativeQuery = true)
+     List<Product> findAllProductsAndIsActiveIsTrue(
+             @Param("fromDate") Timestamp fromDate
+     );
 
      Optional<Product> findByIdAndIsActiveTrue(Long productId);
+
+     Optional<Product> findByProductName(String productName);
 }

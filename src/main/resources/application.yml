@@ -3,6 +3,13 @@ spring:
     name: caffe
   profiles:
     active: prod # Change this to 'prod' when you want to use the production Supabase database
+  quartz:
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: always
+    overwrite-existing-jobs: true
+    properties:
+      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
 
 # Common Configurations
 cloudinary:

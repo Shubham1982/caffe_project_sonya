@@ -21,6 +21,7 @@ public class OrderItem extends AbstractAuditingEntity implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private Long productId;
     private String productName;
     private Double productPrice;
     private Double productActualMadePrice;

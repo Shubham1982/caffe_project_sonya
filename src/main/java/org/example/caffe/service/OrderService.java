@@ -1,9 +1,6 @@
 package org.example.caffe.service;
 
-import org.example.caffe.domain.Order;
-import org.example.caffe.domain.OrderItem;
-import org.example.caffe.domain.OrderStatus;
-import org.example.caffe.domain.Product;
+import org.example.caffe.domain.*;
 import org.example.caffe.dto.CreateOrderRequest;
 import org.example.caffe.dto.OrderDto;
 import org.example.caffe.dto.DashboardDto;
@@ -11,6 +8,7 @@ import org.example.caffe.error.ResourceNotFoundException;
 import org.example.caffe.repository.OrderItemRepository;
 import org.example.caffe.repository.OrderRepository;
 import org.example.caffe.repository.ProductRepository;
+import org.example.caffe.repository.ProductSalesQtyStatsRepository;
 import org.example.caffe.mapper.OrderMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,13 +28,17 @@ public class OrderService {
     private final OrderItemRepository orderItemRepository;
     private final ProductRepository productRepository;
     private final OrderMapper orderMapper;
+    
+    private final ProductSalesQtyStatsRepository statsRepository;
 
     public OrderService(OrderRepository orderRepository,
-            OrderItemRepository orderItemRepository, ProductRepository productRepository, OrderMapper orderMapper) {
+            OrderItemRepository orderItemRepository, ProductRepository productRepository, 
+            OrderMapper orderMapper, ProductSalesQtyStatsRepository statsRepository) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.productRepository = productRepository;
         this.orderMapper = orderMapper;
+        this.statsRepository = statsRepository;
     }
 
     public DashboardDto getDashboardData(LocalDate startDate, LocalDate endDate) {
@@ -50,7 +52,7 @@ public class OrderService {
         Double actualTotalAmount = 0.0;
 
         for (OrderItem item : placedItems) {
-            totalAmount += item.getTotalPrice() != null ? item.getProductPrice() : 0.0;
+            totalAmount += item.getTotalPrice() != null ? item.getTotalPrice() : 0.0;
             actualTotalAmount += (item.getProductActualMadePrice() != null ? item.getProductActualMadePrice() : 0.0) * item.getQuantity();
         }
 
@@ -67,30 +69,35 @@ public class OrderService {
 
         Order order = new Order();
         order.setIsActive(true);
+        
         List<OrderItem> listOrderItem = new ArrayList<>();
-        Double totalPrice = 0.0;
 
         for (CreateOrderRequest req : request) {
-
             Product product = productRepository
                     .findByIdAndIsActiveTrue(req.getProductId())
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Product not found with id: " + req.getProductId()));
 
             OrderItem item = new OrderItem();
+            item.setProductId(product.getId());
             item.setProductName(product.getProductName());
             item.setProductPrice(product.getProductPrice());
             item.setProductActualMadePrice(product.getProductActualMadePrice());
             item.setQuantity(req.getQty().longValue());
             item.setOrder(order);
             item.setTotalPrice(req.getQty() * product.getProductPrice());
-            item.setStatus(OrderStatus.PLACED);   // ← industrial default status
+            item.setStatus(OrderStatus.PLACED);
             listOrderItem.add(item);
-            totalPrice = totalPrice + req.getQty() * product.getProductPrice();
         }
         order.setOrderItems(listOrderItem);
+        Order savedOrder = orderRepository.save(order);
 
-        return orderRepository.save(order);
+        // Stats Update after save so items have IDs
+        for (OrderItem savedItem : savedOrder.getOrderItems()) {
+            adjustStats(savedItem.getProductId(), savedItem.getId(), savedItem.getQuantity(), "Order Created");
+        }
+
+        return savedOrder;
     }
 
     @Transactional
@@ -101,6 +108,10 @@ public class OrderService {
         // Prevent re-activating a cancelled item
         if (item.getStatus() == OrderStatus.CANCELLED) {
             throw new IllegalStateException("Cannot change status of a cancelled order item.");
+        }
+        
+        if (newStatus == OrderStatus.CANCELLED) {
+            adjustStatsViaItem(item, -item.getQuantity(), "Item Cancelled");
         }
 
         item.setStatus(newStatus);
@@ -119,6 +130,10 @@ public class OrderService {
                         .filter(item -> item.getId().equals(dtoItem.getId()))
                         .findFirst()
                         .ifPresent(existingItem -> {
+                            long diff = dtoItem.getQuantity() - existingItem.getQuantity();
+                            if (diff != 0 && existingItem.getStatus() != OrderStatus.CANCELLED) {
+                                adjustStatsViaItem(existingItem, diff, "Order Item Update");
+                            }
                             existingItem.setQuantity(dtoItem.getQuantity());
                             existingItem.setTotalPrice(dtoItem.getQuantity() * existingItem.getProductPrice());
                         });
@@ -144,8 +159,12 @@ public class OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
         // Cancel all line items when order is soft-deleted
-        order.getOrderItems()
-                .forEach(item -> item.setStatus(OrderStatus.CANCELLED));
+        for (OrderItem item : order.getOrderItems()) {
+            if (item.getStatus() != OrderStatus.CANCELLED) {
+                item.setStatus(OrderStatus.CANCELLED);
+                adjustStatsViaItem(item, -item.getQuantity(), "Order Soft Deleted");
+            }
+        }
         order.setIsActive(false);
 
         orderRepository.save(order);
@@ -197,15 +216,33 @@ public class OrderService {
                 .sum();
     }
 
+    @Transactional
     public String updateItemQty(Long itemId, Long qty) {
         OrderItem orderItem = orderItemRepository.findById(itemId).orElseThrow(
                 () -> new ResourceNotFoundException("Item not found with id: " + itemId));
-        if(qty>0){
+        if(qty > 0){
+            long diff = qty - orderItem.getQuantity();
             orderItem.setQuantity(qty);
             orderItem.setTotalPrice(orderItem.getProductPrice() * qty);
             orderItemRepository.save(orderItem);
+            
+            if (orderItem.getStatus() != OrderStatus.CANCELLED) {
+                adjustStatsViaItem(orderItem, diff, "Qty Updated");
+            }
             return "Quatity updated";
         }
         return "Quatity should be greater than Zero updated";
+    }
+    
+    private void adjustStatsViaItem(OrderItem item, Long quantityDelta, String notes) {
+        if (quantityDelta == 0) return;
+        adjustStats(item.getProductId(), item.getId(), quantityDelta, notes);
+    }
+    
+    private void adjustStats(Long productId, Long orderItemId, Long quantityDelta, String notes) {
+        ProductSalesStats stats = statsRepository.findByProductId(productId)
+                .orElseGet(() -> ProductSalesStats.builder().productId(productId).totalQuantitySold(0L).build());
+        stats.setTotalQuantitySold(stats.getTotalQuantitySold() + quantityDelta);
+        statsRepository.save(stats);
     }
 }
