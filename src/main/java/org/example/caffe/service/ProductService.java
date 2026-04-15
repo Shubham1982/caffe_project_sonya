@@ -4,6 +4,8 @@ import org.example.caffe.domain.Product;
 import org.example.caffe.repository.ProductRepository;
 import org.springframework.stereotype.Service;
 
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,14 +46,26 @@ public class ProductService {
                 .orElseThrow(() -> new RuntimeException("Product not found"));
     }
 
-    public List<Product> getAllProducts(Integer page, Integer size) {
+    public List<Product> getAllProducts(Integer page, Integer size, Integer days) {
+
+        int filterDays = (days != null) ? days : 30;
+
+        Timestamp fromDate = Timestamp.valueOf(
+                LocalDateTime.now().minusDays(filterDays)
+        );
+
         if (page != null || size != null) {
             int currentPage = (page != null) ? page : 0;
             int pageSize = (size != null) ? size : 10;
+
             Pageable pageable = PageRequest.of(currentPage, pageSize);
-            return productRepository.findAllProductsAndIsActiveIsTrue(pageable).getContent();
+
+            return productRepository
+                    .findAllProductsAndIsActiveIsTrue(fromDate, pageable)
+                    .getContent();
         }
-        return productRepository.findAllProductsAndIsActiveIsTrue();
+
+        return productRepository.findAllProductsAndIsActiveIsTrue(fromDate);
     }
 
     public String deleteProductByID(Long id) {

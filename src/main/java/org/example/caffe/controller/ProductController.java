@@ -36,9 +36,10 @@ public class ProductController {
     @GetMapping("/product/getall")
     public List<Product> getAllProducts(
             @RequestParam(required = false) Integer page,
-            @RequestParam(required = false) Integer size
-    ) {
-        return productService.getAllProducts(page, size);
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) Integer days
+            ) {
+        return productService.getAllProducts(page, size,days);
     }
     @DeleteMapping("/product/delete/{id}")
     public String deleteProduct(@PathVariable("id") Long id) {
