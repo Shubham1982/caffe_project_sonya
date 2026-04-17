@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.example.caffe.dto.ProductSummaryDto;
 
 import java.sql.Timestamp;
 import java.util.List;
@@ -20,8 +21,8 @@ import org.springframework.data.domain.Pageable;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-     @Query("SELECT new org.example.caffe.dto.ProductSummaryDto(p.id, p.productName) FROM Product p WHERE p.isActive = true")
-     List<org.example.caffe.dto.ProductSummaryDto> findAllActiveProductSummaries();
+     @Query("SELECT p.id, p.productName FROM Product p WHERE p.isActive = true")
+     List<ProductSummaryDto> findAllActiveProductSummaries();
 
      Optional<Product> findByIdAndIsActiveIsTrue(Long id);
 
