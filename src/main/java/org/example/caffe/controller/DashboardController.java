@@ -26,4 +26,12 @@ public class DashboardController {
             @RequestParam("endDate") @DateTimeFormat(pattern = "dd-MM-yyyy") LocalDate endDate) {
         return orderService.getDashboardData(startDate, endDate);
     }
+
+    @GetMapping("/profit-chart")
+    public org.example.caffe.dto.ProfitChartDto getProfitChart(
+            @RequestParam(required = false) Long productId,
+            @RequestParam String reportType,
+            @RequestParam(required = false) Integer year) {
+        return orderService.getProfitChartData(productId, reportType, year);
+    }
 }

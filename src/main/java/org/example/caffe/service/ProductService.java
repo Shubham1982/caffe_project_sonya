@@ -2,6 +2,9 @@ package org.example.caffe.service;
 
 import org.example.caffe.domain.Product;
 import org.example.caffe.repository.ProductRepository;
+import org.example.caffe.dto.ProductSummaryDto;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
@@ -20,14 +23,36 @@ public class ProductService {
         this.productRepository = productRepository;
     }
 
+    @Cacheable(value = "productSummaries")
+    public List<ProductSummaryDto> getAllActiveProductSummaries() {
+        return productRepository.findAllActiveProductSummaries();
+    }
+
+    public List<Product> searchProductsByName(String name) {
+        return productRepository.findByProductNameContainingIgnoreCaseAndIsActiveTrue(name);
+    }
+
     // Add Product
+    @CacheEvict(value = {"productList", "productSummaries"}, allEntries = true)
     public Product addProduct(Product product) {
+        if (productRepository.findByProductName(product.getProductName()).isPresent()) {
+            throw new IllegalArgumentException("Product with name " + product.getProductName() + " already exists");
+        }
         product.setIsActive(true);
         return productRepository.save(product);
     }
 
+    @CacheEvict(value = {"products", "productList", "productSummaries"}, allEntries = true)
     public Product updateProduct(Product product) {
         validateProduct(product);
+        
+        productRepository.findByProductName(product.getProductName())
+                .ifPresent(existingProduct -> {
+                    if (!existingProduct.getId().equals(product.getId())) {
+                        throw new IllegalArgumentException("Product with name " + product.getProductName() + " already exists");
+                    }
+                });
+                
         return productRepository.save(product);
     }
 
@@ -41,11 +66,13 @@ public class ProductService {
         }
     }
 
+    @Cacheable(value = "products", key = "#id")
     public Product getProductById(Long id) {
         return productRepository.findByIdAndIsActiveIsTrue(id)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
     }
 
+    @Cacheable(value = "productList", key = "{#page, #size, #days}")
     public List<Product> getAllProducts(Integer page, Integer size, Integer days) {
 
         int filterDays = (days != null) ? days : 30;
@@ -68,6 +95,7 @@ public class ProductService {
         return productRepository.findAllProductsAndIsActiveIsTrue(fromDate);
     }
 
+    @CacheEvict(value = {"products", "productList", "productSummaries"}, allEntries = true)
     public String deleteProductByID(Long id) {
         Optional<Product> product = productRepository.findById(id);
         product.get().setIsActive(false);

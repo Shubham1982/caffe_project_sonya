@@ -20,6 +20,9 @@ import org.springframework.data.domain.Pageable;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
+     @Query("SELECT new org.example.caffe.dto.ProductSummaryDto(p.id, p.productName) FROM Product p WHERE p.isActive = true")
+     List<org.example.caffe.dto.ProductSummaryDto> findAllActiveProductSummaries();
+
      Optional<Product> findByIdAndIsActiveIsTrue(Long id);
 
      @Query(value = "SELECT p.* FROM products p " +
@@ -53,4 +56,6 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
      Optional<Product> findByIdAndIsActiveTrue(Long productId);
 
      Optional<Product> findByProductName(String productName);
+
+     List<Product> findByProductNameContainingIgnoreCaseAndIsActiveTrue(String productName);
 }
