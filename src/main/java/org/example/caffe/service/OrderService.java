@@ -8,18 +8,27 @@ import org.example.caffe.error.ResourceNotFoundException;
 import org.example.caffe.repository.OrderItemRepository;
 import org.example.caffe.repository.OrderRepository;
 import org.example.caffe.repository.ProductRepository;
-import org.example.caffe.repository.ProductSalesQtyStatsRepository;
 import org.example.caffe.mapper.OrderMapper;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.context.ApplicationEventPublisher;
+import org.example.caffe.event.AdjustStatsEvent;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Year;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import org.example.caffe.dto.ProfitChartDto;
+import org.example.caffe.service.factory.ProfitChartFactory;
+import org.example.caffe.service.factory.ProfitChartGenerator;
 
 @Service
 public class OrderService {
@@ -28,19 +37,22 @@ public class OrderService {
     private final OrderItemRepository orderItemRepository;
     private final ProductRepository productRepository;
     private final OrderMapper orderMapper;
-    
-    private final ProductSalesQtyStatsRepository statsRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
+    private final ProfitChartFactory profitChartFactory;
 
     public OrderService(OrderRepository orderRepository,
             OrderItemRepository orderItemRepository, ProductRepository productRepository, 
-            OrderMapper orderMapper, ProductSalesQtyStatsRepository statsRepository) {
+            OrderMapper orderMapper, ApplicationEventPublisher applicationEventPublisher,
+            ProfitChartFactory profitChartFactory) {
         this.orderRepository = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.productRepository = productRepository;
         this.orderMapper = orderMapper;
-        this.statsRepository = statsRepository;
+        this.applicationEventPublisher = applicationEventPublisher;
+        this.profitChartFactory = profitChartFactory;
     }
 
+    @Cacheable(value = "dashboard", key = "{#startDate, #endDate}")
     public DashboardDto getDashboardData(LocalDate startDate, LocalDate endDate) {
         Instant start = startDate.atStartOfDay().toInstant(ZoneOffset.UTC);
         Instant end = endDate.atTime(23, 59, 59).toInstant(ZoneOffset.UTC);
@@ -64,7 +76,22 @@ public class OrderService {
                 .build();
     }
 
+    @Cacheable(value = "profitCharts", key = "{#productId, #reportType, #year}")
+    public ProfitChartDto getProfitChartData(Long productId, String reportType, Integer year) {
+        if (productId != null && !productRepository.existsById(productId)) {
+            throw new ResourceNotFoundException("Product not found with id: " + productId);
+        }
+
+        ProfitChartGenerator generator = profitChartFactory.getGenerator(reportType);
+        if (generator == null) {
+            return ProfitChartDto.builder().labels(Collections.emptyList()).data(Collections.emptyList()).maxProfit(0.0).minProfit(0.0).build();
+        }
+
+        return generator.generateProfitChart(productId, year);
+    }
+
     @Transactional
+    @CacheEvict(value = {"dashboard", "profitCharts"}, allEntries = true)
     public Order createOrder(List<CreateOrderRequest> request) {
 
         Order order = new Order();
@@ -94,13 +121,14 @@ public class OrderService {
 
         // Stats Update after save so items have IDs
         for (OrderItem savedItem : savedOrder.getOrderItems()) {
-            adjustStats(savedItem.getProductId(), savedItem.getId(), savedItem.getQuantity(), "Order Created");
+            applicationEventPublisher.publishEvent(new AdjustStatsEvent(savedItem.getProductId(), savedItem.getId(), savedItem.getQuantity(), "Order Created"));
         }
 
         return savedOrder;
     }
 
     @Transactional
+    @CacheEvict(value = {"dashboard", "profitCharts"}, allEntries = true)
     public Order updateItemStatus(Long itemId, OrderStatus newStatus) {
         OrderItem item = orderItemRepository.findById(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order item not found with id: " + itemId));
@@ -120,6 +148,7 @@ public class OrderService {
     }
 
     @Transactional
+    @CacheEvict(value = {"dashboard", "profitCharts"}, allEntries = true)
     public Order updateOrder(OrderDto orderDto) {
         Order order = orderRepository.findByIdAndIsActiveTrue(orderDto.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderDto.getId()));
@@ -154,6 +183,7 @@ public class OrderService {
     }
 
     @Transactional
+    @CacheEvict(value = {"dashboard", "profitCharts"}, allEntries = true)
     public String softDeleteOrder(Long orderId) {
         Order order = orderRepository.findByIdAndIsActiveTrue(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
@@ -217,6 +247,7 @@ public class OrderService {
     }
 
     @Transactional
+    @CacheEvict(value = {"dashboard", "profitCharts"}, allEntries = true)
     public String updateItemQty(Long itemId, Long qty) {
         OrderItem orderItem = orderItemRepository.findById(itemId).orElseThrow(
                 () -> new ResourceNotFoundException("Item not found with id: " + itemId));
@@ -236,13 +267,6 @@ public class OrderService {
     
     private void adjustStatsViaItem(OrderItem item, Long quantityDelta, String notes) {
         if (quantityDelta == 0) return;
-        adjustStats(item.getProductId(), item.getId(), quantityDelta, notes);
-    }
-    
-    private void adjustStats(Long productId, Long orderItemId, Long quantityDelta, String notes) {
-        ProductSalesStats stats = statsRepository.findByProductId(productId)
-                .orElseGet(() -> ProductSalesStats.builder().productId(productId).totalQuantitySold(0L).build());
-        stats.setTotalQuantitySold(stats.getTotalQuantitySold() + quantityDelta);
-        statsRepository.save(stats);
+        applicationEventPublisher.publishEvent(new AdjustStatsEvent(item.getProductId(), item.getId(), quantityDelta, notes));
     }
 }

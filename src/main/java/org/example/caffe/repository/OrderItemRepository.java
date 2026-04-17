@@ -13,6 +13,12 @@ import java.util.List;
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
     List<OrderItem> findByStatusAndCreatedDateBetween(OrderStatus status, Instant start, Instant end);
 
+    List<OrderItem> findByStatusAndProductIdAndCreatedDateBetween(OrderStatus status, Long productId, Instant start, Instant end);
+
+    List<OrderItem> findByStatus(OrderStatus status);
+
+    List<OrderItem> findByStatusAndProductId(OrderStatus status, Long productId);
+
     @Query("SELECT oi.productId AS productId, SUM(oi.quantity) AS totalQuantity FROM OrderItem oi WHERE oi.status != 'CANCELLED' GROUP BY oi.productId")
     List<ProductOrderQuantity> findProductOrderQuantities();
 }

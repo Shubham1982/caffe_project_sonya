@@ -1,6 +1,7 @@
 package org.example.caffe.controller;
 
 import org.example.caffe.domain.Product;
+import org.example.caffe.dto.ProductSummaryDto;
 import org.example.caffe.service.ProductService;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,6 +14,16 @@ public class ProductController {
 
     public ProductController(ProductService productService) {
         this.productService = productService;
+    }
+
+    @GetMapping("/product/active-summaries")
+    public List<ProductSummaryDto> getAllActiveProductSummaries() {
+        return productService.getAllActiveProductSummaries();
+    }
+
+    @GetMapping("/product/search")
+    public List<Product> searchProduct(@RequestParam("name") String name) {
+        return productService.searchProductsByName(name);
     }
 
     // Add Product
