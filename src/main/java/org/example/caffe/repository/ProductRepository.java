@@ -21,7 +21,7 @@ import org.springframework.data.domain.Pageable;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
 
-     @Query("SELECT p.id, p.productName FROM Product p WHERE p.isActive = true")
+     @Query("SELECT p.id AS id, p.productName AS productName FROM Product p WHERE p.isActive = true")
      List<ProductSummaryDto> findAllActiveProductSummaries();
 
      Optional<Product> findByIdAndIsActiveIsTrue(Long id);
