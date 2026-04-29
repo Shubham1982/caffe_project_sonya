@@ -58,5 +58,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
      Optional<Product> findByProductName(String productName);
 
-     List<Product> findByProductNameContainingIgnoreCaseAndIsActiveTrue(String productName);
+     @Query(value = "SELECT * FROM products p " +
+             "WHERE (p.product_name % :productName OR p.product_name ILIKE CONCAT('%', :productName, '%')) " +
+             "AND p.is_active = true " +
+             "ORDER BY similarity(p.product_name, :productName) DESC",
+             nativeQuery = true)
+     List<Product> findByProductNameContainingIgnoreCaseAndIsActiveTrue(@Param("productName") String productName);
 }

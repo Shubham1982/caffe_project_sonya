@@ -52,17 +52,17 @@ public class MonthlyProfitChartGenerator implements ProfitChartGenerator {
             profitByMonth.put(month, profitByMonth.get(month) + profit);
         }
 
-        int minMonth = 1;
-        if (!items.isEmpty()) {
-            minMonth = items.stream()
-                    .map(item -> item.getCreatedDate().atZone(ZoneOffset.UTC).getMonthValue())
-                    .min(Integer::compareTo).orElse(1);
-        }
+        // Always start from January; end at the last month that actually has data.
+        // Months before first data show 0; months after last data are excluded.
+        int maxMonth = items.isEmpty() ? LocalDate.now().getMonthValue()
+                : items.stream()
+                        .mapToInt(item -> item.getCreatedDate().atZone(ZoneOffset.UTC).getMonthValue())
+                        .max().orElse(LocalDate.now().getMonthValue());
 
         String[] monthNames = {"", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
         List<String> labels = new ArrayList<>();
         List<Double> data = new ArrayList<>();
-        for (int i = minMonth; i <= 12; i++) {
+        for (int i = 1; i <= maxMonth; i++) {   // Jan → maxMonth
             labels.add(monthNames[i]);
             data.add(profitByMonth.get(i));
         }

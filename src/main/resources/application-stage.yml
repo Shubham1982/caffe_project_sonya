@@ -4,7 +4,7 @@
 spring:
   datasource:
     # Replace the host, port, dbname, username, and password with your actual PostgreSQL credentials
-    url: jdbc:postgresql://localhost:5432/caffe
+    url: jdbc:postgresql://localhost:5432/caffe?prepareThreshold=0
     username: ma-78
     password: ""
     driver-class-name: org.postgresql.Driver
