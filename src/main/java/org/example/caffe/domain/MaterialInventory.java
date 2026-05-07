@@ -14,7 +14,7 @@ import java.io.Serializable;
         @Index(name = "idx_inventory_material_name", columnList = "materialName"),
         @Index(name = "idx_inventory_active", columnList = "isActive")
 })
-public class Inventory extends AbstractAuditingEntity implements Serializable {
+public class MaterialInventory extends AbstractAuditingEntity implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,8 +22,6 @@ public class Inventory extends AbstractAuditingEntity implements Serializable {
 
     @Column(nullable = false, unique = true)
     private String materialName;
-
-    private Double price;
 
     private Boolean isActive;
 }
