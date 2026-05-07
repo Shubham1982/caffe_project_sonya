@@ -1,6 +1,6 @@
 package org.example.caffe.repository;
 
-import org.example.caffe.domain.Inventory;
+import org.example.caffe.domain.MaterialInventory;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -8,11 +8,11 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface InventoryRepository extends JpaRepository<Inventory, Long> {
+public interface InventoryRepository extends JpaRepository<MaterialInventory, Long> {
 
-    Optional<Inventory> findByMaterialNameIgnoreCase(String materialName);
+    Optional<MaterialInventory> findByMaterialNameIgnoreCase(String materialName);
 
-    List<Inventory> findAllByIsActiveTrue();
+    List<MaterialInventory> findAllByIsActiveTrue();
 
-    Optional<Inventory> findByIdAndIsActiveTrue(Long id);
+    Optional<MaterialInventory> findByIdAndIsActiveTrue(Long id);
 }

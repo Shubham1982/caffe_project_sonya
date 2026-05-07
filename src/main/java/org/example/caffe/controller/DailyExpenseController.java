@@ -25,8 +25,9 @@ public class DailyExpenseController {
     // PLACE EXPENSE – equivalent to /api/order/place
     // -------------------------------------------------------------------------
     @PostMapping("/place")
-    public DailyExpense placeExpense(@RequestBody DailyExpenseDto dto) {
-        return dailyExpenseService.placeExpense(dto);
+    public String placeExpense(@RequestBody List<DailyExpenseDto> dtos) {
+        dailyExpenseService.placeExpense(dtos);
+        return "Expense added";
     }
 
     // -------------------------------------------------------------------------

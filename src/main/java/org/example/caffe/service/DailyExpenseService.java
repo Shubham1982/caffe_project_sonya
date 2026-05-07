@@ -1,7 +1,7 @@
 package org.example.caffe.service;
 
 import org.example.caffe.domain.DailyExpense;
-import org.example.caffe.domain.Inventory;
+import org.example.caffe.domain.MaterialInventory;
 import org.example.caffe.dto.DailyExpenseDto;
 import org.example.caffe.dto.ExpenseDashboardDto;
 import org.example.caffe.dto.ProfitChartDto;
@@ -19,6 +19,8 @@ import org.example.caffe.service.factory.ExpenseChartFactory;
 import org.example.caffe.service.factory.ExpenseChartGenerator;
 
 import java.util.List;
+
+import java.util.stream.Collectors;
 
 @Service
 public class DailyExpenseService {
@@ -40,26 +42,29 @@ public class DailyExpenseService {
     // -------------------------------------------------------------------------
     @Transactional
     @CacheEvict(value = { "expense", "expenseList", "expenseDashboard", "expenseCharts" }, allEntries = true)
-    public DailyExpense placeExpense(DailyExpenseDto dto) {
-        Inventory inventory = inventoryRepository.findByIdAndIsActiveTrue(dto.getInventoryId())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Inventory item not found with id: " + dto.getInventoryId()));
+    public void placeExpense(List<DailyExpenseDto> dtos) {
+        List<DailyExpense> expenses = dtos.stream().map(dto -> {
+            MaterialInventory materialInventory = inventoryRepository.findByIdAndIsActiveTrue(dto.getInventoryId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Inventory item not found with id: " + dto.getInventoryId()));
 
-        if (dto.getQuantity() == null || dto.getQuantity() <= 0) {
-            throw new IllegalArgumentException("Quantity must be greater than zero");
-        }
+            if (dto.getQuantity() == null || dto.getQuantity() <= 0) {
+                throw new IllegalArgumentException("Quantity must be greater than zero");
+            }
 
-        DailyExpense expense = new DailyExpense();
-        expense.setInventoryId(inventory.getId());
-        expense.setMaterialName(inventory.getMaterialName()); // snapshot
-        expense.setPrice(inventory.getPrice()); // snapshot
-        expense.setIsActive(true);
+            DailyExpense expense = new DailyExpense();
+            expense.setInventoryId(materialInventory.getId());
+            expense.setMaterialName(materialInventory.getMaterialName()); // snapshot
+            expense.setPrice(dto.getPrice()); // snapshot
+            expense.setIsActive(true);
 
-        if (dto.getExpenseDate() == null)
-            dto.setExpenseDate(LocalDate.now());
-        applyDtoFields(dto, expense);
+            if (dto.getExpenseDate() == null)
+                dto.setExpenseDate(LocalDate.now());
+            applyDtoFields(dto, expense);
 
-        return dailyExpenseRepository.save(expense);
+            return expense;
+        }).collect(Collectors.toList());
+        dailyExpenseRepository.saveAll(expenses);
     }
 
     // -------------------------------------------------------------------------

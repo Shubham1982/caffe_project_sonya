@@ -1,6 +1,6 @@
 package org.example.caffe.service;
 
-import org.example.caffe.domain.Inventory;
+import org.example.caffe.domain.MaterialInventory;
 import org.example.caffe.error.ResourceNotFoundException;
 import org.example.caffe.repository.InventoryRepository;
 import org.springframework.cache.annotation.CacheEvict;
@@ -20,59 +20,59 @@ public class InventoryService {
 
     // CREATE
     @CacheEvict(value = {"inventoryList", "inventory"}, allEntries = true)
-    public Inventory addInventory(Inventory inventory) {
-        inventoryRepository.findByMaterialNameIgnoreCase(inventory.getMaterialName())
+    public MaterialInventory addInventory(MaterialInventory materialInventory) {
+        inventoryRepository.findByMaterialNameIgnoreCase(materialInventory.getMaterialName())
                 .ifPresent(existing -> {
                     throw new IllegalArgumentException(
-                            "Inventory item with name '" + inventory.getMaterialName() + "' already exists");
+                            "Inventory item with name '" + materialInventory.getMaterialName() + "' already exists");
                 });
-        inventory.setIsActive(true);
-        return inventoryRepository.save(inventory);
+        materialInventory.setIsActive(true);
+        return inventoryRepository.save(materialInventory);
     }
 
     // READ – single
     @Cacheable(value = "inventory", key = "#id")
-    public Inventory getInventoryById(Long id) {
+    public MaterialInventory getInventoryById(Long id) {
         return inventoryRepository.findByIdAndIsActiveTrue(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Inventory item not found with id: " + id));
     }
 
     // READ – all active
     @Cacheable(value = "inventoryList")
-    public List<Inventory> getAllInventory() {
+    public List<MaterialInventory> getAllInventory() {
         return inventoryRepository.findAllByIsActiveTrue();
     }
 
     // UPDATE
     @CacheEvict(value = {"inventoryList", "inventory"}, allEntries = true)
-    public Inventory updateInventory(Inventory inventory) {
-        if (inventory.getId() == null) {
+    public MaterialInventory updateInventory(MaterialInventory materialInventory) {
+        if (materialInventory.getId() == null) {
             throw new IllegalArgumentException("Inventory ID must not be null for update");
         }
         // Ensure record exists and is active
-        inventoryRepository.findByIdAndIsActiveTrue(inventory.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Inventory item not found with id: " + inventory.getId()));
+        inventoryRepository.findByIdAndIsActiveTrue(materialInventory.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("Inventory item not found with id: " + materialInventory.getId()));
 
         // Check uniqueness against other records
-        inventoryRepository.findByMaterialNameIgnoreCase(inventory.getMaterialName())
+        inventoryRepository.findByMaterialNameIgnoreCase(materialInventory.getMaterialName())
                 .ifPresent(existing -> {
-                    if (!existing.getId().equals(inventory.getId())) {
+                    if (!existing.getId().equals(materialInventory.getId())) {
                         throw new IllegalArgumentException(
-                                "Another inventory item with name '" + inventory.getMaterialName() + "' already exists");
+                                "Another inventory item with name '" + materialInventory.getMaterialName() + "' already exists");
                     }
                 });
 
-        inventory.setIsActive(true);
-        return inventoryRepository.save(inventory);
+        materialInventory.setIsActive(true);
+        return inventoryRepository.save(materialInventory);
     }
 
     // DELETE – soft delete
     @CacheEvict(value = {"inventoryList", "inventory"}, allEntries = true)
     public String deleteInventory(Long id) {
-        Inventory inventory = inventoryRepository.findByIdAndIsActiveTrue(id)
+        MaterialInventory materialInventory = inventoryRepository.findByIdAndIsActiveTrue(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Inventory item not found with id: " + id));
-        inventory.setIsActive(false);
-        inventoryRepository.save(inventory);
+        materialInventory.setIsActive(false);
+        inventoryRepository.save(materialInventory);
         return "Inventory item deleted successfully";
     }
 }

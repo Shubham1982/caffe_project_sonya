@@ -1,6 +1,6 @@
 package org.example.caffe.controller;
 
-import org.example.caffe.domain.Inventory;
+import org.example.caffe.domain.MaterialInventory;
 import org.example.caffe.service.InventoryService;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,25 +18,25 @@ public class InventoryController {
 
     // CREATE
     @PostMapping("/add")
-    public Inventory addInventory(@RequestBody Inventory inventory) {
-        return inventoryService.addInventory(inventory);
+    public MaterialInventory addInventory(@RequestBody MaterialInventory materialInventory) {
+        return inventoryService.addInventory(materialInventory);
     }
 
     // UPDATE
     @PutMapping("/update")
-    public Inventory updateInventory(@RequestBody Inventory inventory) {
-        return inventoryService.updateInventory(inventory);
+    public MaterialInventory updateInventory(@RequestBody MaterialInventory materialInventory) {
+        return inventoryService.updateInventory(materialInventory);
     }
 
     // GET by ID
     @GetMapping("/{id}")
-    public Inventory getInventoryById(@PathVariable Long id) {
+    public MaterialInventory getInventoryById(@PathVariable Long id) {
         return inventoryService.getInventoryById(id);
     }
 
     // GET all active
     @GetMapping("/getall")
-    public List<Inventory> getAllInventory() {
+    public List<MaterialInventory> getAllInventory() {
         return inventoryService.getAllInventory();
     }
 
