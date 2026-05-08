@@ -11,6 +11,12 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.example.caffe.dto.PaginatedGroupedExpenseDto;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+
 @RestController
 @RequestMapping("/api/expense")
 public class DailyExpenseController {
@@ -47,13 +53,21 @@ public class DailyExpenseController {
     }
 
     // -------------------------------------------------------------------------
-    // GET ALL (optional filters: date, inventoryId)
+    // GET ALL (optional filters: date range, inventoryId) with Pagination
     // -------------------------------------------------------------------------
     @GetMapping("/getall")
-    public List<DailyExpense> getAllExpenses(
-            @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") LocalDate date,
-            @RequestParam(required = false) Long inventoryId) {
-        return dailyExpenseService.getAllExpenses(date, inventoryId);
+    public PaginatedGroupedExpenseDto getAllExpenses(
+            @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "dd-MM-yyyy") LocalDate endDate,
+            @RequestParam(required = false) Long inventoryId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "expenseDate,desc") String[] sort) {
+
+        Sort.Direction direction = sort[1].equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sort[0]));
+
+        return dailyExpenseService.getAllExpenses(startDate, endDate, inventoryId, pageable);
     }
 
     // -------------------------------------------------------------------------

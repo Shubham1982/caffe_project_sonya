@@ -19,8 +19,13 @@ import org.example.caffe.service.factory.ExpenseChartFactory;
 import org.example.caffe.service.factory.ExpenseChartGenerator;
 
 import java.util.List;
+import java.util.Map;
 
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.example.caffe.dto.ExpenseDetailDto;
+import org.example.caffe.dto.PaginatedGroupedExpenseDto;
 
 @Service
 public class DailyExpenseService {
@@ -77,18 +82,44 @@ public class DailyExpenseService {
     }
 
     // -------------------------------------------------------------------------
-    // READ – list with optional filters
+    // READ – list with optional filters and pagination
     // -------------------------------------------------------------------------
-    @Cacheable(value = "expenseList", key = "{#date, #inventoryId}")
-    public List<DailyExpense> getAllExpenses(LocalDate date, Long inventoryId) {
-        if (date != null && inventoryId != null) {
-            return dailyExpenseRepository.findAllByInventoryIdAndExpenseDateAndIsActiveTrue(inventoryId, date);
-        } else if (date != null) {
-            return dailyExpenseRepository.findAllByExpenseDateAndIsActiveTrue(date);
+    @Cacheable(value = "expenseList", key = "{#startDate, #endDate, #inventoryId, #pageable.pageNumber, #pageable.pageSize}")
+    public PaginatedGroupedExpenseDto getAllExpenses(LocalDate startDate, LocalDate endDate, Long inventoryId, Pageable pageable) {
+        Page<DailyExpense> page;
+        if (startDate != null && endDate != null && inventoryId != null) {
+            page = dailyExpenseRepository.findAllByInventoryIdAndExpenseDateBetweenAndIsActiveTruePageable(inventoryId, startDate, endDate, pageable);
+        } else if (startDate != null && endDate != null) {
+            page = dailyExpenseRepository.findAllByExpenseDateBetweenAndIsActiveTruePageable(startDate, endDate, pageable);
         } else if (inventoryId != null) {
-            return dailyExpenseRepository.findAllByInventoryIdAndIsActiveTrue(inventoryId);
+            page = dailyExpenseRepository.findAllByInventoryIdAndIsActiveTrue(inventoryId, pageable);
+        } else {
+            page = dailyExpenseRepository.findAllByIsActiveTrueOrderByExpenseDateDesc(pageable);
         }
-        return dailyExpenseRepository.findAllByIsActiveTrueOrderByExpenseDateDesc();
+
+        Map<String, List<ExpenseDetailDto>> groupedContent = page.getContent().stream()
+                .collect(Collectors.groupingBy(
+                        DailyExpense::getMaterialName,
+                        Collectors.mapping(expense -> {
+                            ExpenseDetailDto dto = new ExpenseDetailDto();
+                            dto.setPrice(expense.getPrice());
+                            dto.setQuantity(expense.getQuantity());
+                            dto.setExpenseDate(expense.getExpenseDate());
+                            dto.setTotalAmount(expense.getTotalAmount());
+                            dto.setNotes(expense.getNotes());
+                            return dto;
+                        }, Collectors.toList())
+                ));
+
+        PaginatedGroupedExpenseDto response = new PaginatedGroupedExpenseDto();
+        response.setContent(groupedContent);
+        response.setPageNumber(page.getNumber());
+        response.setPageSize(page.getSize());
+        response.setTotalElements(page.getTotalElements());
+        response.setTotalPages(page.getTotalPages());
+        response.setLast(page.isLast());
+
+        return response;
     }
 
     // -------------------------------------------------------------------------
